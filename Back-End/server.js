@@ -22,6 +22,11 @@ app.use(compress());
 app.use(express.urlencoded({ extended: true }));
 const globalError = require('./middlewares/error.middleware.js');
 app.use(express.static(path.join(__dirname, 'uploads')));
+app.post(
+  '/webhook-checkout',
+  express.raw({ type: 'application/json' }),
+  webHookCheckOut,
+);
 app.use(express.json());
 if (process.env.NODE_ENV == 'development') {
   app.use(morgan('dev'));
@@ -30,11 +35,6 @@ if (process.env.NODE_ENV == 'development') {
 app.set('query parser', 'extended');
 
 //Mount Routes
-app.post(
-  '/webhook-checkout',
-  express.raw({ type: 'application/json' }),
-  webHookCheckOut,
-);
 mountRouter(app);
 
 //Handle unhandled routes

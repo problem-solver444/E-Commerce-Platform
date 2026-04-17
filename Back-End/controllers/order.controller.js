@@ -114,9 +114,9 @@ exports.updateOrderToDelevered = asyncHandler(async (req, res, next) => {
   });
 });
 
-//desc get check out session to stripe
-//route UPDATE /api/v1/orders/:cartId/checkout
-//access private/user
+// desc: get checkout session from stripe
+// route: POST /api/v1/orders/:cartId/checkout
+// access: private/user
 exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
   const shippingPrice = 0;
   const taxPrice = 0;
@@ -125,6 +125,7 @@ exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
     _id: req.params.cartId,
     user: req.user._id,
   });
+
   if (!cart) {
     return next(new ApiError('No Cart For Current User', 404));
   }
@@ -134,6 +135,7 @@ exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
     : cart.totalCartPrice;
 
   const totalOrderPrice = totalPrice + taxPrice + shippingPrice;
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -152,21 +154,61 @@ exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
     success_url: `${req.protocol}://${req.get('host')}/api/v1/orders`,
     cancel_url: `${req.protocol}://${req.get('host')}/api/v1/carts`,
     customer_email: req.user.email,
+
+    client_reference_id: req.params.cartId,
+
+    metadata: req.body.shippingAddress || {},
   });
+
   res.status(200).json({
     status: 'success',
     session,
   });
 });
 
-//desc get check out session to stripe
-//route UPDATE /api/v1/orders/:cartId/checkout
-//access private/user
+
+const createCardOrder = async (session) => {
+  const cartId = session.client_reference_id;
+  const shippingAddress = session.metadata;
+  const orderPrice = session.amount_total / 100;
+
+  const user = await User.findOne({ email: session.customer_email });
+
+  const cart = await Cart.findById(cartId);
+
+  if (!cart) throw new Error('Cart not found');
+
+  const order = await Order.create({
+    user: user._id,
+    cartItems: cart.cartItems,
+    shippingAddress,
+    totalOrderPrice: orderPrice,
+    paymentMethod: 'card',
+    isPaid: true,
+    paidAt: Date.now(),
+  });
+
+  const bulkOptions = cart.cartItems.map((item) => ({
+    updateOne: {
+      filter: { _id: item.product },
+      update: { $inc: { quantity: -item.quantity, sold: +item.quantity } },
+    },
+  }));
+  await Product.bulkWrite(bulkOptions);
+
+  await Cart.findByIdAndDelete(cartId);
+};
+
+
+// desc: webhook listener for stripe events
+// route: POST /webhook
+// access: public (stripe only)
 exports.webHookCheckOut = asyncHandler((req, res) => {
   let event;
+
   if (process.env.STRIPE_WEBHOOK_SECRET_KEY) {
-    // Get the signature sent by Stripe
     const signature = req.headers['stripe-signature'];
+
     try {
       event = stripe.webhooks.constructEvent(
         req.body,
@@ -178,24 +220,15 @@ exports.webHookCheckOut = asyncHandler((req, res) => {
       return res.sendStatus(400);
     }
 
-    // Handle the event
     switch (event.type) {
-      case 'payment_intent.succeeded':
-        const paymentIntent = event.data.object;
-        // Then define and call a method to handle the successful payment intent.
-        // handlePaymentIntentSucceeded(paymentIntent);
+      case 'checkout.session.completed':
+        createCardOrder(event.data.object);
         break;
-      case 'payment_method.attached':
-        const paymentMethod = event.data.object;
-        // Then define and call a method to handle the successful attachment of a PaymentMethod.
-        // handlePaymentMethodAttached(paymentMethod);
-        break;
-      // ... handle other event types
+
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
 
-    // Return a res to acknowledge receipt of the event
     res.json({ received: true });
   }
 });

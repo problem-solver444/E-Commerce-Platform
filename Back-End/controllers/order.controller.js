@@ -12,7 +12,10 @@ exports.createCashOrder = asyncHandler(async (req, res, next) => {
   const shippingPrice = 0;
   const taxPrice = 0;
 
-  const cart = await Cart.findOne({ _id: req.params.cartId, user: req.user._id });
+  const cart = await Cart.findOne({
+    _id: req.params.cartId,
+    user: req.user._id,
+  });
   if (!cart) {
     return next(new ApiError('No Cart For Current User', 404));
   }
@@ -118,7 +121,10 @@ exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
   const shippingPrice = 0;
   const taxPrice = 0;
 
-  const cart = await Cart.findOne({ _id: req.params.cartId, user: req.user._id });
+  const cart = await Cart.findOne({
+    _id: req.params.cartId,
+    user: req.user._id,
+  });
   if (!cart) {
     return next(new ApiError('No Cart For Current User', 404));
   }
@@ -131,17 +137,17 @@ exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
-  {
-    price_data: {
-      currency: 'egp',
-      product_data: {
-        name: 'Order Payment',
+      {
+        price_data: {
+          currency: 'egp',
+          product_data: {
+            name: 'Order Payment',
+          },
+          unit_amount: totalOrderPrice * 100,
+        },
+        quantity: 1,
       },
-      unit_amount: totalOrderPrice * 100,
-    },
-    quantity: 1,
-  },
-],
+    ],
     mode: 'payment',
     success_url: `${req.protocol}://${req.get('host')}/api/v1/orders`,
     cancel_url: `${req.protocol}://${req.get('host')}/api/v1/carts`,
@@ -151,4 +157,45 @@ exports.getCheckOutSession = asyncHandler(async (req, res, next) => {
     status: 'success',
     session,
   });
+});
+
+//desc get check out session to stripe
+//route UPDATE /api/v1/orders/:cartId/checkout
+//access private/user
+exports.webHookCheckOut = asyncHandler((req, res) => {
+  let event;
+  if (process.env.STRIPE_WEBHOOK_SECRET_KEY) {
+    // Get the signature sent by Stripe
+    const signature = req.headers['stripe-signature'];
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        signature,
+        process.env.STRIPE_WEBHOOK_SECRET_KEY,
+      );
+    } catch (err) {
+      console.log(`⚠️ Webhook signature verification failed.`, err.message);
+      return res.sendStatus(400);
+    }
+
+    // Handle the event
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        // Then define and call a method to handle the successful payment intent.
+        // handlePaymentIntentSucceeded(paymentIntent);
+        break;
+      case 'payment_method.attached':
+        const paymentMethod = event.data.object;
+        // Then define and call a method to handle the successful attachment of a PaymentMethod.
+        // handlePaymentMethodAttached(paymentMethod);
+        break;
+      // ... handle other event types
+      default:
+        console.log(`Unhandled event type ${event.type}`);
+    }
+
+    // Return a res to acknowledge receipt of the event
+    res.json({ received: true });
+  }
 });

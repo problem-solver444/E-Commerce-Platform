@@ -6,19 +6,19 @@ const dbConnect = require('./config/database.js');
 const app = express();
 const ApiError = require('./utils/api-error.js');
 const dotenv = require('dotenv');
-const cors = require('cors')
-const compress = require('compression')
+const cors = require('cors');
+const compress = require('compression');
 dotenv.config({ path: 'config.env' });
 
 //routers
-const {mountRouter} = require('./routes');
-
+const { mountRouter } = require('./routes');
+const{webHookCheckOut} = require('./controllers/order.controller');
 //Database Connection
 dbConnect();
 
 //Middleware
-app.use(cors())
-app.use(compress())
+app.use(cors());
+app.use(compress());
 app.use(express.urlencoded({ extended: true }));
 const globalError = require('./middlewares/error.middleware.js');
 app.use(express.static(path.join(__dirname, 'uploads')));
@@ -30,6 +30,11 @@ if (process.env.NODE_ENV == 'development') {
 app.set('query parser', 'extended');
 
 //Mount Routes
+app.post(
+  '/webhook-checkout',
+  express.raw({ type: 'application/json' }),
+  webHookCheckOut,
+);
 mountRouter(app);
 
 //Handle unhandled routes

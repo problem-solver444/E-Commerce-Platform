@@ -7,6 +7,7 @@ const Product = require('../models/product.model');
 const factory = require('../utils/handler.factory');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/user.model');
+
 exports.createCashOrder = asyncHandler(async (req, res, next) => {
   //SETTING APP
   const shippingPrice = 0;
@@ -203,7 +204,7 @@ const createCardOrder = async (session) => {
 // desc: webhook listener for stripe events
 // route: POST /webhook
 // access: public (stripe only)
-exports.webHookCheckOut = asyncHandler((req, res) => {
+exports.webHookCheckOut = asyncHandler(async (req, res) => {
   let event;
 
   if (process.env.STRIPE_WEBHOOK_SECRET_KEY) {
@@ -222,7 +223,7 @@ exports.webHookCheckOut = asyncHandler((req, res) => {
 
     switch (event.type) {
       case 'checkout.session.completed':
-        createCardOrder(event.data.object);
+        await createCardOrder(event.data.object);
         break;
 
       default:

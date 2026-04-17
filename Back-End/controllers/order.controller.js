@@ -6,7 +6,7 @@ const ApiError = require('../utils/api-error');
 const Product = require('../models/product.model');
 const factory = require('../utils/handler.factory');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
+const User = require('../models/user.model');
 exports.createCashOrder = asyncHandler(async (req, res, next) => {
   //SETTING APP
   const shippingPrice = 0;

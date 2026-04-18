@@ -12,7 +12,7 @@
 ---
 
 ## Table of Contents
-
+- [API Documentation](#api-documentation)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
@@ -24,6 +24,14 @@
 - [License](#license)
 
 ---
+## API Documentation
+
+Explore all endpoints interactively via Postman:
+
+[![Postman Docs](https://img.shields.io/badge/API%20Docs-Postman-FF6C37?style=flat-square&logo=postman&logoColor=white)](https://documenter.getpostman.com/view/44453212/2sBXqDsiVB)
+
+> **Live Docs:** https://documenter.getpostman.com/view/44453212/2sBXqDsiVB
+
 
 ## Tech Stack
 

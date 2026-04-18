@@ -10,7 +10,7 @@ const cors = require('cors');
 const mongoSanitize = require('express-mongo-sanitize');
 const compress = require('compression');
 const rateLimit = require("express-rate-limit");
-const xss = require('xss');
+const xss = require('xss-clean');
 dotenv.config({ path: 'config.env' });
 
 //routers

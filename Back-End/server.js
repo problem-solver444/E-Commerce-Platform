@@ -33,9 +33,8 @@ app.post(
 // To remove data using these defaults:
 app.use(mongoSanitize());
 app.use(xss());
-
-app.use(express.urlencoded({ extended: true }));
 const globalError = require('./middlewares/error.middleware.js');
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'uploads')));
 app.use(express.json({ limit: '10kb' }));
 if (process.env.NODE_ENV == 'development') {
@@ -51,6 +50,8 @@ const limiter=rateLimit({
 });
 app.use("/api/v1/auth/forgotPassword'",limiter);
 app.use("/api/v1/auth/login",limiter);
+
+
 //Mount Routes
 mountRouter(app);
 

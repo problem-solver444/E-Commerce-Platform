@@ -7,14 +7,20 @@ const app = express();
 const ApiError = require('./utils/api-error.js');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const mongoSanitize = require('express-mongo-sanitize');
 const compress = require('compression');
+const rateLimit = require("express-rate-limit");
+const xss = require('xss');
 dotenv.config({ path: 'config.env' });
 
 //routers
 const { mountRouter } = require('./routes');
 const{webHookCheckOut} = require('./controllers/order.controller');
+
+
 //Database Connection
 dbConnect();
+
 
 //Middleware
 app.use(cors());
@@ -24,16 +30,27 @@ app.post(
   express.raw({ type: 'application/json' }),
   webHookCheckOut,
 );
+// To remove data using these defaults:
+app.use(mongoSanitize());
+app.use(xss());
+
 app.use(express.urlencoded({ extended: true }));
 const globalError = require('./middlewares/error.middleware.js');
 app.use(express.static(path.join(__dirname, 'uploads')));
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
 if (process.env.NODE_ENV == 'development') {
   app.use(morgan('dev'));
   console.log(`mode: ${process.env.NODE_ENV}`);
 }
 app.set('query parser', 'extended');
 
+const limiter=rateLimit({
+  max:10,
+  windowMs:15*60*1000,
+  message:"Too many requests, try later"
+});
+app.use("/api/v1/auth/forgotPassword'",limiter);
+app.use("/api/v1/auth/login",limiter);
 //Mount Routes
 mountRouter(app);
 

@@ -7,6 +7,12 @@ const ApiError = require('../utils/api-error');
 const sendMail = require('../utils/send-email');
 const createToken = require('../utils/create-token');
 
+const buildAuthResponseUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+});
+
 
 //@desc Register new user
 //@route POST /api/v1/auth/signup
@@ -23,7 +29,7 @@ exports.signUp = asyncHandler(async (req, res, next) => {
   res.status(201).json({
     status: 'success',
     message: 'Account created successfully',
-    data: user,
+    data: buildAuthResponseUser(user),
     token,
   });
 });
@@ -43,7 +49,7 @@ exports.login = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: 'success',
     message: 'Logged in successfully',
-    data: user,
+    data: buildAuthResponseUser(user),
     token,
   });
 });
